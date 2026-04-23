@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  nome         String
+  email        String        @unique
+  senhaHash    String        @map("senha_hash")
+  criadoEm    DateTime      @default(now()) @map("criado_em")
+  atualizadoEm DateTime     @updatedAt @map("atualizado_em")
+
+  transacoes   Transaction[]
+  investimentos Investment[]
+  metas        Goal[]
+  dividas      Debt[]
+
+  @@map("usuarios")
+}
+
+model Transaction {
+  id              String      @id @default(cuid())
+  usuarioId       String      @map("usuario_id")
+  tipo            TipoTransacao
+  valor           Decimal     @db.Decimal(15, 2)
+  categoria       String
+  descricao       String?
+  data            DateTime    @default(now())
+  criadoPorIa    Boolean     @default(false) @map("criado_por_ia")
+  promptOriginal  String?     @map("prompt_original")
+  criadoEm       DateTime    @default(now()) @map("criado_em")
+
+  usuario         User        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("transacoes")
+}
+
+model Investment {
+  id            String          @id @default(cuid())
+  usuarioId     String          @map("usuario_id")
+  tipo          TipoInvestimento
+  ticker        String
+  quantidade    Decimal         @db.Decimal(15, 8)
+  precoMedio    Decimal         @db.Decimal(15, 2) @map("preco_medio")
+  criadoEm     DateTime        @default(now()) @map("criado_em")
+  atualizadoEm DateTime        @updatedAt @map("atualizado_em")
+
+  usuario       User            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, ticker])
+  @@map("investimentos")
+}
+
+model Goal {
+  id           String     @id @default(cuid())
+  usuarioId    String     @map("usuario_id")
+  nome         String
+  valorAlvo    Decimal    @db.Decimal(15, 2) @map("valor_alvo")
+  valorAtual   Decimal    @db.Decimal(15, 2) @default(0) @map("valor_atual")
+  tipo         TipoMeta
+  prazo        DateTime?
+  criadoEm    DateTime   @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  usuario      User       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("metas")
+}
+
+model Debt {
+  id           String   @id @default(cuid())
+  usuarioId    String   @map("usuario_id")
+  credor       String
+  valorTotal   Decimal  @db.Decimal(15, 2) @map("valor_total")
+  valorPago    Decimal  @db.Decimal(15, 2) @default(0) @map("valor_pago")
+  taxaJuros    Decimal? @db.Decimal(5, 2) @map("taxa_juros")
+  vencimento   DateTime?
+  criadoEm    DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  usuario      User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("dividas")
+}
+
+enum TipoTransacao {
+  receita
+  despesa
+}
+
+enum TipoInvestimento {
+  cripto
+  acao
+  renda_fixa
+  fii
+}
+
+enum TipoMeta {
+  economizar
+  gasto_maximo
+}
