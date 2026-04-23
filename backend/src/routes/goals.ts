@@ -6,8 +6,8 @@ const createSchema = z.object({
   nome: z.string().min(1, 'Nome é obrigatório.'),
   valorAlvo: z.number().positive('Valor alvo deve ser positivo.'),
   valorAtual: z.number().min(0).default(0),
-  tipo: z.enum(['economizar', 'gasto_maximo']),
-  prazo: z.string().datetime({ offset: true }).optional(),
+  tipo: z.enum(['economizar', 'investir', 'comprar', 'viajar', 'outros']),
+  prazo: z.string().optional(),
 });
 
 const updateSchema = createSchema.partial();

@@ -20,8 +20,8 @@ const app = Fastify({
 app.decorate('authenticate', authenticate);
 
 await app.register(cors, {
-  origin: env.NODE_ENV === 'development' ? true : ['https://your-frontend.com'],
-  credentials: true,
+  origin: env.NODE_ENV === 'development' ? '*' : (env.CORS_ORIGIN ? env.CORS_ORIGIN.split(',') : ['https://your-frontend.com']),
+  credentials: env.NODE_ENV !== 'development',
 });
 
 await app.register(jwt, {

@@ -34,6 +34,7 @@ services:
       BRAPI_TOKEN: ${BRAPI_TOKEN:-}
       COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://192.168.0.81:8080}
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,6 +43,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://192.168.0.81:3000
     restart: unless-stopped
     ports:
       - "8080:80"

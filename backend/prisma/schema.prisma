@@ -102,5 +102,8 @@ enum TipoInvestimento {
 
 enum TipoMeta {
   economizar
-  gasto_maximo
+  investir
+  comprar
+  viajar
+  outros
 }

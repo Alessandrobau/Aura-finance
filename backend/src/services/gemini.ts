@@ -75,7 +75,7 @@ export async function chat(
 ): Promise<GeminiChatResponse> {
   const genAI = getClient();
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-3-flash-preview',
     systemInstruction: SYSTEM_PROMPT,
     tools: [{ functionDeclarations: transactionFunctions }],
   });
@@ -114,7 +114,7 @@ export async function chat(
 
 export async function generateInsight(prompt: string): Promise<string> {
   const genAI = getClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
   const result = await model.generateContent([
     { text: `${SYSTEM_PROMPT}\n\n${prompt}` },

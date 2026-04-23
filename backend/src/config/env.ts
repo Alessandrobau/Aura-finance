@@ -26,4 +26,5 @@ export const env = {
   PORT: parseInt(optionalEnv('PORT', '3000'), 10),
   HOST: optionalEnv('HOST', '0.0.0.0'),
   NODE_ENV: optionalEnv('NODE_ENV', 'development'),
+  CORS_ORIGIN: optionalEnv('CORS_ORIGIN', ''),
 };

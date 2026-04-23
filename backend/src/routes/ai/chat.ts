@@ -33,6 +33,12 @@ export async function aiChatRoutes(app: FastifyInstance) {
       provider === 'ollama' ||
       (provider === 'auto' && !env.GEMINI_API_KEY && (await isOllamaAvailable()));
 
+    if (!useOllama && !env.GEMINI_API_KEY) {
+      return reply.status(503).send({
+        error: 'Nenhum provedor de IA disponível. Configure GEMINI_API_KEY ou inicie o Ollama.',
+      });
+    }
+
     if (useOllama) {
       usedProvider = 'ollama';
       const ollamaResponse = await ollamaChat(historico, mensagem);
