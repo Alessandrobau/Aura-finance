@@ -25,8 +25,6 @@ export async function aiChatRoutes(app: FastifyInstance) {
     const { mensagem, historico, provider } = result.data;
     const userId = request.user.id;
 
-    let responseText = '';
-    let transacaoCriada = null;
     let usedProvider = provider;
 
     const useOllama =
@@ -42,7 +40,7 @@ export async function aiChatRoutes(app: FastifyInstance) {
     if (useOllama) {
       usedProvider = 'ollama';
       const ollamaResponse = await ollamaChat(historico, mensagem);
-      responseText = ollamaResponse.text;
+      let transacaoCriada = null;
 
       if (ollamaResponse.transacao) {
         const t = ollamaResponse.transacao;
@@ -58,32 +56,66 @@ export async function aiChatRoutes(app: FastifyInstance) {
           },
         });
       }
-    } else {
-      usedProvider = 'gemini';
-      const geminiResponse = await geminiChat(historico, mensagem);
-      responseText = geminiResponse.text;
 
-      if (geminiResponse.functionCall?.transacao) {
-        const t = geminiResponse.functionCall.transacao;
-        transacaoCriada = await prisma.transaction.create({
-          data: {
-            usuarioId: userId,
-            tipo: t.tipo as 'receita' | 'despesa',
-            valor: t.valor,
-            categoria: t.categoria,
-            descricao: t.descricao,
-            data: t.data ? new Date(t.data) : new Date(),
-            criadoPorIa: true,
-            promptOriginal: mensagem,
-          },
-        });
-      }
+      return reply.send({ resposta: ollamaResponse.text, provider: usedProvider, transacaoCriada });
     }
 
-    return reply.send({
-      resposta: responseText,
-      provider: usedProvider,
-      transacaoCriada,
-    });
+    // Gemini path
+    usedProvider = 'gemini';
+    const geminiResponse = await geminiChat(historico, mensagem);
+    const responseText = geminiResponse.text;
+
+    if (geminiResponse.functionCall?.transacao) {
+      const t = geminiResponse.functionCall.transacao;
+      const transacaoCriada = await prisma.transaction.create({
+        data: {
+          usuarioId: userId,
+          tipo: t.tipo as 'receita' | 'despesa',
+          valor: t.valor,
+          categoria: t.categoria,
+          descricao: t.descricao,
+          data: t.data ? new Date(t.data) : new Date(),
+          criadoPorIa: true,
+          promptOriginal: mensagem,
+        },
+      });
+      return reply.send({ resposta: responseText, provider: usedProvider, transacaoCriada });
+    }
+
+    if (geminiResponse.functionCall?.solicitacao) {
+      const s = geminiResponse.functionCall.solicitacao;
+      return reply.send({
+        resposta: responseText || s.pergunta,
+        provider: usedProvider,
+        transacaoCriada: null,
+        solicitacao: s,
+      });
+    }
+
+    if (geminiResponse.functionCall?.simulacao) {
+      const { valorTotal, parcelas, taxaJuros } = geminiResponse.functionCall.simulacao;
+      const taxa = taxaJuros / 100;
+      let valorParcela: number;
+      let total: number;
+
+      if (!taxa) {
+        valorParcela = valorTotal / parcelas;
+        total = valorTotal;
+      } else {
+        // Price (PMT) formula: PMT = PV * [i(1+i)^n] / [(1+i)^n - 1]
+        const fator = Math.pow(1 + taxa, parcelas);
+        valorParcela = (valorTotal * taxa * fator) / (fator - 1);
+        total = valorParcela * parcelas;
+      }
+
+      return reply.send({
+        resposta: responseText || `Simulação: ${parcelas}x de R$ ${valorParcela.toFixed(2)}`,
+        provider: usedProvider,
+        transacaoCriada: null,
+        simulacao: { valorTotal, parcelas, valorParcela, taxaJuros, total },
+      });
+    }
+
+    return reply.send({ resposta: responseText, provider: usedProvider, transacaoCriada: null });
   });
 }

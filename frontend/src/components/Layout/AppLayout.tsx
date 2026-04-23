@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { FloatingChat } from "@/components/Chat/FloatingChat";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -88,6 +89,8 @@ export const AppLayout = () => {
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
+
+      <FloatingChat />
     </div>
   );
 };

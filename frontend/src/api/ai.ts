@@ -5,6 +5,20 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ChatSolicitacao {
+  campo: string;
+  pergunta: string;
+  opcoes: string[];
+}
+
+export interface ChatSimulacao {
+  valorTotal: number;
+  parcelas: number;
+  valorParcela: number;
+  taxaJuros: number;
+  total: number;
+}
+
 export interface ChatResponse {
   resposta: string;
   provider: string;
@@ -15,6 +29,8 @@ export interface ChatResponse {
     categoria: string;
     criadoPorIa: boolean;
   };
+  solicitacao?: ChatSolicitacao;
+  simulacao?: ChatSimulacao;
 }
 
 export const aiApi = {
