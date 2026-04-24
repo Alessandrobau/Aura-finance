@@ -1,4 +1,4 @@
-# Finance App
+# Aura Finance App
 
 An AI-powered personal finance platform for tracking transactions, investments, goals, and debts, with an integrated AI assistant for financial insights and natural-language transaction entry.
 
