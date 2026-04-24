@@ -116,6 +116,98 @@ export async function aiChatRoutes(app: FastifyInstance) {
       });
     }
 
+    if (geminiResponse.functionCall?.meta) {
+      const m = geminiResponse.functionCall.meta;
+      const metaCriada = await prisma.goal.create({
+        data: {
+          usuarioId: userId,
+          nome: m.nome,
+          valorAlvo: m.valorAlvo,
+          valorAtual: 0,
+          tipo: m.tipo as 'economizar' | 'investir' | 'comprar' | 'viajar' | 'outros',
+          prazo: m.prazo ? new Date(m.prazo) : null,
+        },
+      });
+      return reply.send({ resposta: responseText, provider: usedProvider, metaCriada });
+    }
+
+    if (geminiResponse.functionCall?.contribuicaoMeta) {
+      const { nomeMeta, valor } = geminiResponse.functionCall.contribuicaoMeta;
+      const meta = await prisma.goal.findFirst({
+        where: { usuarioId: userId, nome: { contains: nomeMeta, mode: 'insensitive' } },
+      });
+
+      if (!meta) {
+        return reply.send({
+          resposta: `Não encontrei nenhuma meta com o nome "${nomeMeta}". Verifique o nome e tente novamente.`,
+          provider: usedProvider,
+        });
+      }
+
+      const metaAtualizada = await prisma.goal.update({
+        where: { id: meta.id },
+        data: { valorAtual: { increment: valor } },
+      });
+
+      return reply.send({
+        resposta: responseText,
+        provider: usedProvider,
+        contribuicaoMeta: {
+          metaNome: metaAtualizada.nome,
+          valorContribuido: valor,
+          valorAtual: Number(metaAtualizada.valorAtual),
+          valorAlvo: Number(metaAtualizada.valorAlvo),
+          percentual: Math.min(100, (Number(metaAtualizada.valorAtual) / Number(metaAtualizada.valorAlvo)) * 100),
+        },
+      });
+    }
+
+    if (geminiResponse.functionCall?.investimento) {
+      const inv = geminiResponse.functionCall.investimento;
+      const ticker = inv.ticker.toUpperCase();
+
+      const existing = await prisma.investment.findUnique({
+        where: { usuarioId_ticker: { usuarioId: userId, ticker } },
+      });
+
+      let investimentoAdicionado;
+      if (existing) {
+        const qtdTotal = Number(existing.quantidade) + inv.quantidade;
+        const novoPreco = (Number(existing.quantidade) * Number(existing.precoMedio) + inv.quantidade * inv.precoMedio) / qtdTotal;
+        investimentoAdicionado = await prisma.investment.update({
+          where: { id: existing.id },
+          data: { quantidade: qtdTotal, precoMedio: novoPreco },
+        });
+      } else {
+        investimentoAdicionado = await prisma.investment.create({
+          data: {
+            usuarioId: userId,
+            tipo: inv.tipo as 'cripto' | 'acao' | 'renda_fixa' | 'fii',
+            ticker,
+            quantidade: inv.quantidade,
+            precoMedio: inv.precoMedio,
+          },
+        });
+      }
+
+      return reply.send({ resposta: responseText, provider: usedProvider, investimentoAdicionado });
+    }
+
+    if (geminiResponse.functionCall?.divida) {
+      const d = geminiResponse.functionCall.divida;
+      const dividaCriada = await prisma.debt.create({
+        data: {
+          usuarioId: userId,
+          credor: d.credor,
+          valorTotal: d.valorTotal,
+          valorPago: 0,
+          taxaJuros: d.taxaJuros ?? null,
+          vencimento: d.vencimento ? new Date(d.vencimento) : null,
+        },
+      });
+      return reply.send({ resposta: responseText, provider: usedProvider, dividaCriada });
+    }
+
     return reply.send({ resposta: responseText, provider: usedProvider, transacaoCriada: null });
   });
 }

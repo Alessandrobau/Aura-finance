@@ -19,6 +19,38 @@ export interface ChatSimulacao {
   total: number;
 }
 
+export interface ChatMetaCriada {
+  id: string;
+  nome: string;
+  valorAlvo: string;
+  tipo: string;
+  prazo?: string | null;
+}
+
+export interface ChatContribuicaoMeta {
+  metaNome: string;
+  valorContribuido: number;
+  valorAtual: number;
+  valorAlvo: number;
+  percentual: number;
+}
+
+export interface ChatInvestimentoAdicionado {
+  id: string;
+  tipo: string;
+  ticker: string;
+  quantidade: string;
+  precoMedio: string;
+}
+
+export interface ChatDividaCriada {
+  id: string;
+  credor: string;
+  valorTotal: string;
+  taxaJuros?: string | null;
+  vencimento?: string | null;
+}
+
 export interface ChatResponse {
   resposta: string;
   provider: string;
@@ -31,6 +63,10 @@ export interface ChatResponse {
   };
   solicitacao?: ChatSolicitacao;
   simulacao?: ChatSimulacao;
+  metaCriada?: ChatMetaCriada;
+  contribuicaoMeta?: ChatContribuicaoMeta;
+  investimentoAdicionado?: ChatInvestimentoAdicionado;
+  dividaCriada?: ChatDividaCriada;
 }
 
 export const aiApi = {

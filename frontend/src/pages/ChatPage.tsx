@@ -2,9 +2,9 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui-kit/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { aiApi, ChatMessage, ChatSimulacao, ChatSolicitacao } from "@/api/ai";
+import { aiApi, ChatMessage, ChatSimulacao, ChatSolicitacao, ChatMetaCriada, ChatContribuicaoMeta, ChatInvestimentoAdicionado, ChatDividaCriada } from "@/api/ai";
 import { fmtBRL } from "@/lib/format";
-import { Sparkles, Send, CircleCheck, Calculator } from "lucide-react";
+import { Sparkles, Send, CircleCheck, Calculator, Target, TrendingUp, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -15,13 +15,17 @@ interface UiMessage extends ChatMessage {
   transacao?: { tipo: "receita" | "despesa"; valor: string; categoria: string };
   solicitacao?: ChatSolicitacao;
   simulacao?: ChatSimulacao;
+  metaCriada?: ChatMetaCriada;
+  contribuicaoMeta?: ChatContribuicaoMeta;
+  investimentoAdicionado?: ChatInvestimentoAdicionado;
+  dividaCriada?: ChatDividaCriada;
 }
 
 const WELCOME: UiMessage = {
   id: "welcome",
   role: "model",
   content:
-    'Olá! Sou Aura, sua assistente financeira. Posso registrar transações, simular parcelas e analisar seus gastos. Tente: "Gastei R$ 50 no almoço" ou "Simule R$ 1200 em 6x".',
+    'Olá! Sou Aura, sua assistente financeira. Posso registrar transações, criar metas, aportar em metas, adicionar investimentos ao portfólio, registrar dívidas e simular parcelas.\n\nExemplos:\n• "Gastei R$ 50 no almoço"\n• "Criar meta viagem Europa R$ 8000"\n• "Aporte de R$ 500 na meta viagem"\n• "Comprei 10 PETR4 a R$ 38,50"\n• "Tenho uma dívida de R$ 5000 no Nubank"',
 };
 
 const ChatPage = () => {
@@ -60,6 +64,10 @@ const ChatPage = () => {
             : undefined,
           solicitacao: r.solicitacao,
           simulacao: r.simulacao,
+          metaCriada: r.metaCriada,
+          contribuicaoMeta: r.contribuicaoMeta,
+          investimentoAdicionado: r.investimentoAdicionado,
+          dividaCriada: r.dividaCriada,
         },
       ]);
     } catch (err: unknown) {
@@ -155,6 +163,108 @@ const ChatPage = () => {
                           <span className="tabular-nums font-medium">{fmtBRL(m.simulacao.total)}</span>
                         </div>
                       </>
+                    )}
+                  </div>
+                )}
+
+                {m.metaCriada && (
+                  <div className="mt-3 p-3 rounded-xl bg-surface border border-border text-foreground text-xs space-y-1.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="size-4 text-sage shrink-0" />
+                      <span className="font-medium">Meta criada</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Nome</span>
+                      <span className="font-medium">{m.metaCriada.nome}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Objetivo</span>
+                      <span className="tabular-nums">{fmtBRL(m.metaCriada.valorAlvo)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tipo</span>
+                      <span className="capitalize">{m.metaCriada.tipo}</span>
+                    </div>
+                    {m.metaCriada.prazo && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Prazo</span>
+                        <span>{new Date(m.metaCriada.prazo).toLocaleDateString("pt-BR")}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {m.contribuicaoMeta && (
+                  <div className="mt-3 p-3 rounded-xl bg-surface border border-border text-foreground text-xs space-y-1.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CircleCheck className="size-4 text-sage shrink-0" />
+                      <span className="font-medium">Aporte registrado · {m.contribuicaoMeta.metaNome}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Valor aportado</span>
+                      <span className="tabular-nums font-medium">{fmtBRL(m.contribuicaoMeta.valorContribuido)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Progresso</span>
+                      <span className="tabular-nums">{fmtBRL(m.contribuicaoMeta.valorAtual)} / {fmtBRL(m.contribuicaoMeta.valorAlvo)}</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-sage" style={{ width: `${m.contribuicaoMeta.percentual}%` }} />
+                    </div>
+                    <span className="text-muted-foreground">{m.contribuicaoMeta.percentual.toFixed(1)}% concluído</span>
+                  </div>
+                )}
+
+                {m.investimentoAdicionado && (
+                  <div className="mt-3 p-3 rounded-xl bg-surface border border-border text-foreground text-xs space-y-1.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="size-4 text-sage shrink-0" />
+                      <span className="font-medium">Investimento adicionado ao portfólio</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ativo</span>
+                      <span className="font-medium uppercase">{m.investimentoAdicionado.ticker}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tipo</span>
+                      <span className="capitalize">{m.investimentoAdicionado.tipo.replace("_", " ")}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Quantidade</span>
+                      <span className="tabular-nums">{Number(m.investimentoAdicionado.quantidade).toLocaleString("pt-BR")}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Preço médio</span>
+                      <span className="tabular-nums">{fmtBRL(m.investimentoAdicionado.precoMedio)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {m.dividaCriada && (
+                  <div className="mt-3 p-3 rounded-xl bg-surface border border-border text-foreground text-xs space-y-1.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CreditCard className="size-4 text-destructive shrink-0" />
+                      <span className="font-medium">Dívida registrada</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Credor</span>
+                      <span className="font-medium">{m.dividaCriada.credor}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Valor total</span>
+                      <span className="tabular-nums">{fmtBRL(m.dividaCriada.valorTotal)}</span>
+                    </div>
+                    {m.dividaCriada.taxaJuros && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Juros/mês</span>
+                        <span>{Number(m.dividaCriada.taxaJuros).toFixed(2)}%</span>
+                      </div>
+                    )}
+                    {m.dividaCriada.vencimento && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Vencimento</span>
+                        <span>{new Date(m.dividaCriada.vencimento).toLocaleDateString("pt-BR")}</span>
+                      </div>
                     )}
                   </div>
                 )}
