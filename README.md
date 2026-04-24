@@ -150,7 +150,3 @@ Optional but recommended:
 ## Deployment
 
 See [deploy.md](deploy.md) for full production deployment instructions covering Docker Compose (VPS), Railway, and Vercel.
-
-## License
-
-MIT
