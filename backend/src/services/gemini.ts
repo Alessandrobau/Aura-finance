@@ -14,9 +14,13 @@ Você ajuda o usuário a gerenciar suas finanças pessoais de forma clara e obje
 Responda sempre em português brasileiro.
 
 Regras:
-- Quando o usuário quiser registrar uma transação (receita ou despesa), use a função registrar_transacao.
+- Quando o usuário quiser registrar uma transação (receita ou despesa), use registrar_transacao.
 - Se faltarem informações essenciais (como categoria ou tipo) para registrar a transação, use solicitar_informacao_faltante com opções relevantes em vez de presumir.
 - Quando o usuário pedir simulação de parcelamento ou quiser saber o valor de uma parcela, use simular_fatura.
+- Quando o usuário quiser criar uma meta financeira (economizar, investir, comprar algo, viajar), use criar_meta.
+- Quando o usuário quiser adicionar dinheiro a uma meta existente, use contribuir_meta com o nome (ou parte do nome) da meta e o valor.
+- Quando o usuário quiser adicionar um ativo ao portfólio (ação, cripto, FII, renda fixa), use adicionar_investimento.
+- Quando o usuário quiser registrar uma dívida ou empréstimo, use registrar_divida.
 - Seja conciso mas completo. Forneça insights financeiros quando relevante.`;
 
 const financeFunctions: FunctionDeclaration[] = [
@@ -96,6 +100,104 @@ const financeFunctions: FunctionDeclaration[] = [
       required: ['valor_total', 'parcelas'],
     },
   },
+  {
+    name: 'criar_meta',
+    description: 'Cria uma nova meta financeira (economizar, investir, comprar algo, viajar, etc.).',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        nome: {
+          type: SchemaType.STRING,
+          description: 'Nome da meta. Ex: "Viagem para Europa", "Reserva de emergência".',
+        },
+        valor_alvo: {
+          type: SchemaType.NUMBER,
+          description: 'Valor total a ser alcançado em reais.',
+        },
+        tipo: {
+          type: SchemaType.STRING,
+          enum: ['economizar', 'investir', 'comprar', 'viajar', 'outros'],
+          description: 'Tipo da meta.',
+        },
+        prazo: {
+          type: SchemaType.STRING,
+          description: 'Data limite no formato ISO 8601 (YYYY-MM-DD). Opcional.',
+        },
+      },
+      required: ['nome', 'valor_alvo', 'tipo'],
+    },
+  },
+  {
+    name: 'contribuir_meta',
+    description: 'Adiciona um aporte (contribuição em dinheiro) a uma meta financeira existente.',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        nome_meta: {
+          type: SchemaType.STRING,
+          description: 'Nome ou parte do nome da meta para identificá-la. Ex: "viagem", "reserva".',
+        },
+        valor: {
+          type: SchemaType.NUMBER,
+          description: 'Valor a ser adicionado à meta em reais.',
+        },
+      },
+      required: ['nome_meta', 'valor'],
+    },
+  },
+  {
+    name: 'adicionar_investimento',
+    description: 'Adiciona um novo ativo ao portfólio de investimentos (ação, cripto, FII ou renda fixa).',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        tipo: {
+          type: SchemaType.STRING,
+          enum: ['cripto', 'acao', 'renda_fixa', 'fii'],
+          description: 'Tipo do investimento.',
+        },
+        ticker: {
+          type: SchemaType.STRING,
+          description: 'Código do ativo. Ex: "PETR4", "BTC", "HGLG11", "TESOURO_SELIC".',
+        },
+        quantidade: {
+          type: SchemaType.NUMBER,
+          description: 'Quantidade de ativos adquiridos.',
+        },
+        preco_medio: {
+          type: SchemaType.NUMBER,
+          description: 'Preço médio de compra por unidade em reais.',
+        },
+      },
+      required: ['tipo', 'ticker', 'quantidade', 'preco_medio'],
+    },
+  },
+  {
+    name: 'registrar_divida',
+    description: 'Registra uma nova dívida ou empréstimo.',
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        credor: {
+          type: SchemaType.STRING,
+          description: 'Nome do credor. Ex: "Banco Itaú", "Cartão Nubank", "Empréstimo pessoal".',
+        },
+        valor_total: {
+          type: SchemaType.NUMBER,
+          description: 'Valor total da dívida em reais.',
+        },
+        taxa_juros: {
+          type: SchemaType.NUMBER,
+          description: 'Taxa de juros mensal em percentual. Ex: 1.99. Opcional.',
+        },
+        vencimento: {
+          type: SchemaType.STRING,
+          description: 'Data de vencimento no formato ISO 8601 (YYYY-MM-DD). Opcional.',
+        },
+      },
+      required: ['credor', 'valor_total'],
+    },
+  },
 ];
 
 export interface ChatMessage {
@@ -120,6 +222,28 @@ export interface FunctionCallResult {
     valorTotal: number;
     parcelas: number;
     taxaJuros: number;
+  };
+  meta?: {
+    nome: string;
+    valorAlvo: number;
+    tipo: string;
+    prazo?: string;
+  };
+  contribuicaoMeta?: {
+    nomeMeta: string;
+    valor: number;
+  };
+  investimento?: {
+    tipo: string;
+    ticker: string;
+    quantidade: number;
+    precoMedio: number;
+  };
+  divida?: {
+    credor: string;
+    valorTotal: number;
+    taxaJuros?: number;
+    vencimento?: string;
   };
 }
 
@@ -192,6 +316,64 @@ export async function chat(
           valorTotal: args['valor_total'] as number,
           parcelas: args['parcelas'] as number,
           taxaJuros: (args['taxa_juros_mensal'] as number) || 0,
+        },
+      },
+    };
+  }
+
+  if (functionCall?.name === 'criar_meta') {
+    const args = functionCall.args as Record<string, unknown>;
+    return {
+      text: response.text() || `Meta "${args['nome']}" criada com sucesso!`,
+      functionCall: {
+        meta: {
+          nome: args['nome'] as string,
+          valorAlvo: args['valor_alvo'] as number,
+          tipo: args['tipo'] as string,
+          prazo: args['prazo'] as string | undefined,
+        },
+      },
+    };
+  }
+
+  if (functionCall?.name === 'contribuir_meta') {
+    const args = functionCall.args as Record<string, unknown>;
+    return {
+      text: response.text() || `Aporte adicionado à meta!`,
+      functionCall: {
+        contribuicaoMeta: {
+          nomeMeta: args['nome_meta'] as string,
+          valor: args['valor'] as number,
+        },
+      },
+    };
+  }
+
+  if (functionCall?.name === 'adicionar_investimento') {
+    const args = functionCall.args as Record<string, unknown>;
+    return {
+      text: response.text() || `Investimento em ${args['ticker']} adicionado ao portfólio!`,
+      functionCall: {
+        investimento: {
+          tipo: args['tipo'] as string,
+          ticker: args['ticker'] as string,
+          quantidade: args['quantidade'] as number,
+          precoMedio: args['preco_medio'] as number,
+        },
+      },
+    };
+  }
+
+  if (functionCall?.name === 'registrar_divida') {
+    const args = functionCall.args as Record<string, unknown>;
+    return {
+      text: response.text() || `Dívida com ${args['credor']} registrada.`,
+      functionCall: {
+        divida: {
+          credor: args['credor'] as string,
+          valorTotal: args['valor_total'] as number,
+          taxaJuros: args['taxa_juros'] as number | undefined,
+          vencimento: args['vencimento'] as string | undefined,
         },
       },
     };
