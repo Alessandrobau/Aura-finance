@@ -1,6 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { prisma } from '../../db/prisma.js';
-import { generateInsight } from '../../services/gemini.js';
+import { generateInsight as geminiInsight } from '../../services/gemini.js';
+import { generateInsight as ollamaInsight, isOllamaAvailable } from '../../services/ollama.js';
+import { env } from '../../config/env.js';
+
+async function generateInsight(prompt: string): Promise<string> {
+  if (env.GEMINI_API_KEY) return geminiInsight(prompt);
+  if (await isOllamaAvailable()) return ollamaInsight(prompt);
+  throw new Error('Nenhum provedor de IA disponível.');
+}
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
