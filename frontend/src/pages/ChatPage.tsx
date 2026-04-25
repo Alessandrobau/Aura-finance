@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui-kit/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { aiApi, ChatMessage, ChatSimulacao, ChatSolicitacao, ChatMetaCriada, ChatContribuicaoMeta, ChatInvestimentoAdicionado, ChatDividaCriada } from "@/api/ai";
 import { fmtBRL } from "@/lib/format";
 import { Sparkles, Send, CircleCheck, Calculator, Target, TrendingUp, CreditCard } from "lucide-react";
@@ -32,7 +33,8 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<UiMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState<string>("auto");
+  const [selectedProvider, setSelectedProvider] = useState<"auto" | "gemini" | "ollama">("auto");
+  const [usedProvider, setUsedProvider] = useState<string>("auto");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,8 +53,8 @@ const ChatPage = () => {
     setLoading(true);
 
     try {
-      const r = await aiApi.chat(text, historico, "auto");
-      setProvider(r.provider);
+      const r = await aiApi.chat(text, historico, selectedProvider);
+      setUsedProvider(r.provider);
       setMessages((prev) => [
         ...prev,
         {
@@ -89,8 +91,8 @@ const ChatPage = () => {
     sendMessage(text);
   };
 
-  const providerLabel =
-    provider === "gemini" ? "Gemini" : provider === "ollama" ? "Ollama (Local)" : "Auto";
+  const usedProviderLabel =
+    usedProvider === "gemini" ? "Gemini" : usedProvider === "ollama" ? "Ollama" : "Auto";
 
   return (
     <div className="h-dvh flex flex-col">
@@ -100,9 +102,23 @@ const ChatPage = () => {
           title="Aura, sua IA financeira."
           description="Converse para registrar gastos, entender seu fluxo ou pedir conselhos."
           action={
-            <span className="text-xs uppercase tracking-widest text-muted-foreground bg-muted px-3 py-1.5 rounded-full flex items-center gap-1.5">
-              <Sparkles className="size-3" /> {providerLabel}
-            </span>
+            <div className="flex items-center gap-3">
+              <ToggleGroup
+                type="single"
+                value={selectedProvider}
+                onValueChange={(v) => { if (v) setSelectedProvider(v as "auto" | "gemini" | "ollama"); }}
+                className="bg-muted rounded-full p-0.5 gap-0"
+              >
+                <ToggleGroupItem value="auto" className="rounded-full px-3 py-1 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm">Auto</ToggleGroupItem>
+                <ToggleGroupItem value="gemini" className="rounded-full px-3 py-1 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm">Gemini</ToggleGroupItem>
+                <ToggleGroupItem value="ollama" className="rounded-full px-3 py-1 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm">Ollama</ToggleGroupItem>
+              </ToggleGroup>
+              {usedProvider !== "auto" && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="size-3" /> {usedProviderLabel}
+                </span>
+              )}
+            </div>
           }
         />
 
